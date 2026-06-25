@@ -78,7 +78,29 @@ export default function Produtos() {
       return;
     }
 
-    let fotoFinal = await enviarFoto();
+    let fotoFinal = foto;
+
+    if (arquivo) {
+      const nomeArquivo = `${Date.now()}-${arquivo.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("produtos")
+        .upload(nomeArquivo, arquivo);
+
+      if (uploadError) {
+        console.log(uploadError);
+
+        alert("Erro no upload");
+
+        return;
+      }
+
+      const url = supabase.storage.from("produtos").getPublicUrl(nomeArquivo);
+
+      fotoFinal = url.data.publicUrl;
+
+      console.log("IMAGEM:", fotoFinal);
+    }
 
     if (editando) {
       await supabase
@@ -90,7 +112,7 @@ export default function Produtos() {
 
           quantidade: Number(quantidade),
 
-          foto: fotoFinal || foto,
+          foto: fotoFinal,
         })
 
         .eq("id", editando.id);
