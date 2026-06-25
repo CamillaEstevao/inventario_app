@@ -13,6 +13,9 @@ export default function Produtos() {
   const [categoria, setCategoria] = useState("Geral");
   const [tipoContagem, setTipoContagem] = useState("unidade");
   const [unidadesPorPacote, setUnidadesPorPacote] = useState(1);
+  const [pacotesEstoque, setPacotesEstoque] = useState(0);
+  const [unidadesAvulsasEstoque, setUnidadesAvulsasEstoque] = useState(0);
+
   const [foto, setFoto] = useState("");
   const [arquivo, setArquivo] = useState(null);
   const [preview, setPreview] = useState("");
@@ -68,12 +71,25 @@ export default function Produtos() {
     return url.data.publicUrl;
   }
 
+  function calcularTotalProduto() {
+    if (tipoContagem === "pacote") {
+      return (
+        Number(pacotesEstoque || 0) * Number(unidadesPorPacote || 1) +
+        Number(unidadesAvulsasEstoque || 0)
+      );
+    }
+
+    return Number(quantidade || 0);
+  }
+
   function limparForm() {
     setNome("");
     setQuantidade("");
     setCategoria("Geral");
     setTipoContagem("unidade");
     setUnidadesPorPacote(1);
+    setPacotesEstoque(0);
+    setUnidadesAvulsasEstoque(0);
     setFoto("");
     setArquivo(null);
     setPreview("");
@@ -88,12 +104,24 @@ export default function Produtos() {
   }
 
   function editarProduto(produto) {
+    const total = Number(produto.quantidade || 0);
+    const unidadesPacote = Number(produto.unidades_por_pacote || 1);
+
     setEditando(produto);
     setNome(produto.nome || "");
-    setQuantidade(String(produto.quantidade ?? 0));
+    setQuantidade(String(total));
     setCategoria(produto.categoria || "Geral");
     setTipoContagem(produto.tipo_contagem || "unidade");
-    setUnidadesPorPacote(produto.unidades_por_pacote || 1);
+    setUnidadesPorPacote(unidadesPacote);
+
+    if (produto.tipo_contagem === "pacote") {
+      setPacotesEstoque(Math.floor(total / unidadesPacote));
+      setUnidadesAvulsasEstoque(total % unidadesPacote);
+    } else {
+      setPacotesEstoque(0);
+      setUnidadesAvulsasEstoque(0);
+    }
+
     setFoto(produto.foto || "");
     setPreview(produto.foto || "");
     setArquivo(null);
@@ -115,9 +143,11 @@ export default function Produtos() {
       return;
     }
 
+    const quantidadeFinal = calcularTotalProduto();
+
     const produtoPayload = {
       nome: nome.trim(),
-      quantidade: Number(quantidade || 0),
+      quantidade: quantidadeFinal,
       categoria,
       tipo_contagem: tipoContagem,
       unidades_por_pacote:
@@ -206,7 +236,7 @@ export default function Produtos() {
                 {produto.categoria || "Geral"}
               </p>
 
-              <p>Qtd total: {produto.quantidade}</p>
+              <p>Total da semana: {produto.quantidade}</p>
 
               {produto.tipo_contagem === "pacote" && (
                 <p className="text-sm text-blue-700">
@@ -308,22 +338,50 @@ export default function Produtos() {
             </select>
 
             {tipoContagem === "pacote" && (
+              <>
+                <input
+                  type="number"
+                  placeholder="Unidades por pacote. Ex: 100"
+                  value={unidadesPorPacote}
+                  onChange={(e) => setUnidadesPorPacote(e.target.value)}
+                  className="border p-3 rounded-xl w-full"
+                />
+
+                <input
+                  type="number"
+                  placeholder="Pacotes fechados. Ex: 1"
+                  value={pacotesEstoque}
+                  onChange={(e) => setPacotesEstoque(e.target.value)}
+                  className="border p-3 rounded-xl w-full"
+                />
+
+                <input
+                  type="number"
+                  placeholder="Unidades avulsas. Ex: 50"
+                  value={unidadesAvulsasEstoque}
+                  onChange={(e) => setUnidadesAvulsasEstoque(e.target.value)}
+                  className="border p-3 rounded-xl w-full"
+                />
+
+                <div className="bg-blue-50 rounded-xl p-3 text-center">
+                  <p className="text-sm text-blue-700">Total calculado</p>
+                  <strong className="text-3xl text-blue-900">
+                    {calcularTotalProduto()}
+                  </strong>
+                  <p className="text-xs text-blue-700">unidades</p>
+                </div>
+              </>
+            )}
+
+            {tipoContagem === "unidade" && (
               <input
                 type="number"
-                placeholder="Unidades por pacote. Ex: 100"
-                value={unidadesPorPacote}
-                onChange={(e) => setUnidadesPorPacote(e.target.value)}
+                placeholder="Quantidade total da semana"
+                value={quantidade}
+                onChange={(e) => setQuantidade(e.target.value)}
                 className="border p-3 rounded-xl w-full"
               />
             )}
-
-            <input
-              type="number"
-              placeholder="Quantidade total em unidades"
-              value={quantidade}
-              onChange={(e) => setQuantidade(e.target.value)}
-              className="border p-3 rounded-xl w-full"
-            />
 
             <button
               onClick={salvarProduto}
