@@ -8,14 +8,37 @@ export default function Relatorios() {
 
   const [carregando, setCarregando] = useState(true);
 
-  async function buscarRelatorios() {
+  async function buscar() {
     const { data, error } = await supabase
 
       .from("inventarios")
 
-      .select("*")
+      .select(
+        `
 
-      .order("data", { ascending: false });
+id,
+created_at,
+total_itens,
+
+inventario_itens (
+
+quantidade,
+
+produtos (
+
+nome,
+foto
+
+)
+
+)
+
+`,
+      )
+
+      .order("created_at", {
+        ascending: false,
+      });
 
     if (!error) {
       setInventarios(data);
@@ -25,7 +48,7 @@ export default function Relatorios() {
   }
 
   useEffect(() => {
-    buscarRelatorios();
+    buscar();
   }, []);
 
   return (
@@ -35,63 +58,76 @@ export default function Relatorios() {
 bg-[#102d5c]
 text-white
 p-5
-shadow
 "
       >
         <h1 className="text-xl font-bold">Relatórios</h1>
-
-        <p className="text-sm">Histórico de inventários</p>
       </header>
 
       <main className="p-4">
-        {carregando && <p className="text-center">Carregando...</p>}
-
-        <div className="space-y-4">
-          {inventarios.map((item) => (
-            <div
-              key={item.id}
-              className="
+        {inventarios.map((inv) => (
+          <div
+            key={inv.id}
+            className="
 bg-white
 rounded-2xl
 p-4
-shadow-md
+shadow
+mb-5
 "
-            >
-              <div className="flex gap-3 items-center">
-                <FileText />
+          >
+            <div className="flex gap-3">
+              <FileText />
 
-                <div>
-                  <h2 className="font-bold">Inventário #{item.id}</h2>
+              <div>
+                <h2 className="font-bold">Inventário #{inv.id}</h2>
 
-                  <p className="text-gray-500 flex gap-2 items-center">
-                    <CalendarDays size={16} />
+                <p className="flex gap-2 text-gray-500">
+                  <CalendarDays size={16} />
 
-                    {new Date(item.data).toLocaleDateString("pt-BR")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <p className="text-gray-400">Total de itens</p>
-
-                <strong className="text-3xl">{item.total_itens}</strong>
+                  {new Date(inv.created_at).toLocaleDateString("pt-BR")}
+                </p>
               </div>
             </div>
-          ))}
 
-          {inventarios.length === 0 && !carregando && (
-            <div
-              className="
-bg-white
-p-5
+            <div className="mt-4 space-y-3">
+              {inv.inventario_itens.map((item) => (
+                <div
+                  key={item.id}
+                  className="
+flex
+items-center
+gap-3
+bg-gray-50
+p-3
 rounded-xl
-text-center
 "
-            >
-              Nenhum inventário salvo ainda
+                >
+                  <img
+                    src={
+                      item.produtos?.foto || "https://via.placeholder.com/60"
+                    }
+                    className="
+w-14
+h-14
+rounded-xl
+object-cover
+"
+                  />
+
+                  <div>
+                    <strong>{item.produtos?.nome}</strong>
+
+                    <p>Qtd: {item.quantidade}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        ))}
+
+        {inventarios.length === 0 && (
+          <p className="text-center">Nenhum inventário</p>
+        )}
       </main>
 
       <BottomMenu />
