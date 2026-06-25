@@ -50,37 +50,25 @@ export default function Produtos() {
 
     const nomeArquivo = `${Date.now()}-${arquivo.name}`;
 
-    const { error } = await supabase.storage
-
+    const upload = await supabase.storage
       .from("produtos")
+      .upload(nomeArquivo, arquivo, {
+        upsert: false,
+      });
 
-      .upload(
-        nomeArquivo,
+    if (upload.error) {
+      console.log(upload.error);
 
-        arquivo,
-
-        {
-          cacheControl: "3600",
-
-          upsert: false,
-        },
-      );
-
-    if (error) {
-      console.log(error);
-
-      alert("Erro ao enviar foto");
+      alert("Erro enviando imagem");
 
       return "";
     }
 
-    const resultado = supabase.storage
-
+    const { data } = supabase.storage
       .from("produtos")
-
       .getPublicUrl(nomeArquivo);
 
-    return resultado.data.publicUrl;
+    return data.publicUrl;
   }
 
   async function salvarProduto() {
