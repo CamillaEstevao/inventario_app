@@ -83,14 +83,16 @@ export default function Produtos() {
     }
 
     if (editando) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("produtos")
         .update({
           nome: nome.trim(),
           quantidade: Number(quantidade || 0),
           foto: fotoFinal || foto,
         })
-        .eq("id", editando.id);
+        .eq("id", editando.id)
+        .select()
+        .single();
 
       if (error) {
         console.log(error);
@@ -98,12 +100,20 @@ export default function Produtos() {
         setSalvando(false);
         return;
       }
+
+      setProdutos((listaAtual) =>
+        listaAtual.map((produto) => (produto.id === data.id ? data : produto)),
+      );
     } else {
-      const { error } = await supabase.from("produtos").insert({
-        nome: nome.trim(),
-        quantidade: Number(quantidade || 0),
-        foto: fotoFinal,
-      });
+      const { data, error } = await supabase
+        .from("produtos")
+        .insert({
+          nome: nome.trim(),
+          quantidade: Number(quantidade || 0),
+          foto: fotoFinal,
+        })
+        .select()
+        .single();
 
       if (error) {
         console.log(error);
@@ -111,12 +121,11 @@ export default function Produtos() {
         setSalvando(false);
         return;
       }
+
+      setProdutos((listaAtual) => [data, ...listaAtual]);
     }
 
     limparForm();
-
-    await buscarProdutos();
-
     setSalvando(false);
   }
 
@@ -158,7 +167,9 @@ export default function Produtos() {
       return;
     }
 
-    await buscarProdutos();
+    setProdutos((listaAtual) =>
+      listaAtual.filter((produto) => produto.id !== id),
+    );
   }
 
   return (
