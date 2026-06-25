@@ -236,12 +236,25 @@ export default function Produtos() {
                 {produto.categoria || "Geral"}
               </p>
 
-              <p>Total da semana: {produto.quantidade}</p>
+              <p>Total da semana: {produto.quantidade} unidades</p>
 
               {produto.tipo_contagem === "pacote" && (
-                <p className="text-sm text-blue-700">
-                  1 pacote = {produto.unidades_por_pacote} unidades
-                </p>
+                <div className="text-sm text-blue-700">
+                  <p>
+                    Equivale a:{" "}
+                    {Math.floor(
+                      Number(produto.quantidade || 0) /
+                        Number(produto.unidades_por_pacote || 1),
+                    )}{" "}
+                    pacote(s)
+                    {" + "}
+                    {Number(produto.quantidade || 0) %
+                      Number(produto.unidades_por_pacote || 1)}{" "}
+                    unidade(s)
+                  </p>
+
+                  <p>1 pacote = {produto.unidades_por_pacote} unidades</p>
+                </div>
               )}
 
               <div className="flex gap-3 mt-3">
