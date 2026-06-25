@@ -147,10 +147,10 @@ export default function Inventario() {
 
           if (produto.tipo_contagem === "pacote") {
             texto += `Pacotes: ${produto.pacotes}\n`;
-            texto += `Unidades avulsas: ${produto.unidades_avulsas}\n`;
+            texto += `Unidades: ${produto.unidades_avulsas}\n`;
             texto += `Total: ${calcularTotal(produto)} unidades\n\n`;
           } else {
-            texto += `Qtd: ${calcularTotal(produto)}\n\n`;
+            texto += `Unidades: ${calcularTotal(produto)}\n\n`;
           }
         });
       }
@@ -268,41 +268,48 @@ export default function Inventario() {
 
               {produto.tipo_contagem === "pacote" ? (
                 <div className="mt-4 space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-2">
-                      Pacotes fechados
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-sm font-bold text-gray-600 mb-2">
+                      📦 Pacotes
                     </p>
 
                     <div className="flex items-center justify-between">
                       <button
                         onClick={() => alterarCampo(produto.id, "pacotes", -1)}
-                        className="bg-gray-100 rounded-full p-3"
+                        className="bg-white rounded-full p-3 shadow-sm"
                       >
                         <Minus />
                       </button>
 
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={produto.pacotes}
-                        onChange={(e) =>
-                          digitarCampo(produto.id, "pacotes", e.target.value)
-                        }
-                        className="w-28 text-center text-3xl font-bold border rounded-xl p-2"
-                      />
+                      <div className="relative">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={produto.pacotes}
+                          onChange={(e) =>
+                            digitarCampo(produto.id, "pacotes", e.target.value)
+                          }
+                          placeholder="0"
+                          className="w-32 text-center text-3xl font-bold border rounded-xl p-2 pr-4"
+                        />
+
+                        <span className="absolute -bottom-5 left-0 right-0 text-center text-xs text-gray-500">
+                          pacote(s)
+                        </span>
+                      </div>
 
                       <button
                         onClick={() => alterarCampo(produto.id, "pacotes", 1)}
-                        className="bg-gray-100 rounded-full p-3"
+                        className="bg-white rounded-full p-3 shadow-sm"
                       >
                         <Plus />
                       </button>
                     </div>
                   </div>
 
-                  <div>
-                    <p className="text-sm text-gray-500 mb-2">
-                      Unidades avulsas
+                  <div className="bg-gray-50 rounded-xl p-3 mt-6">
+                    <p className="text-sm font-bold text-gray-600 mb-2">
+                      📄 Unidades
                     </p>
 
                     <div className="flex items-center justify-between">
@@ -310,11 +317,68 @@ export default function Inventario() {
                         onClick={() =>
                           alterarCampo(produto.id, "unidades_avulsas", -1)
                         }
-                        className="bg-gray-100 rounded-full p-3"
+                        className="bg-white rounded-full p-3 shadow-sm"
                       >
                         <Minus />
                       </button>
 
+                      <div className="relative">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={produto.unidades_avulsas}
+                          onChange={(e) =>
+                            digitarCampo(
+                              produto.id,
+                              "unidades_avulsas",
+                              e.target.value,
+                            )
+                          }
+                          placeholder="0"
+                          className="w-32 text-center text-3xl font-bold border rounded-xl p-2 pr-4"
+                        />
+
+                        <span className="absolute -bottom-5 left-0 right-0 text-center text-xs text-gray-500">
+                          unidade(s)
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          alterarCampo(produto.id, "unidades_avulsas", 1)
+                        }
+                        className="bg-white rounded-full p-3 shadow-sm"
+                      >
+                        <Plus />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 rounded-xl p-3 text-center mt-6">
+                    <p className="text-sm text-blue-700">Total calculado</p>
+                    <strong className="text-3xl text-blue-900">
+                      {calcularTotal(produto)}
+                    </strong>
+                    <p className="text-xs text-blue-700">unidades</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-xl p-3 mt-4">
+                  <p className="text-sm font-bold text-gray-600 mb-2">
+                    📄 Unidades
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() =>
+                        alterarCampo(produto.id, "unidades_avulsas", -1)
+                      }
+                      className="bg-white rounded-full p-3 shadow-sm"
+                    >
+                      <Minus />
+                    </button>
+
+                    <div className="relative">
                       <input
                         type="number"
                         inputMode="numeric"
@@ -326,61 +390,24 @@ export default function Inventario() {
                             e.target.value,
                           )
                         }
-                        className="w-28 text-center text-3xl font-bold border rounded-xl p-2"
+                        placeholder="0"
+                        className="w-32 text-center text-3xl font-bold border rounded-xl p-2 pr-4"
                       />
 
-                      <button
-                        onClick={() =>
-                          alterarCampo(produto.id, "unidades_avulsas", 1)
-                        }
-                        className="bg-gray-100 rounded-full p-3"
-                      >
-                        <Plus />
-                      </button>
+                      <span className="absolute -bottom-5 left-0 right-0 text-center text-xs text-gray-500">
+                        unidade(s)
+                      </span>
                     </div>
+
+                    <button
+                      onClick={() =>
+                        alterarCampo(produto.id, "unidades_avulsas", 1)
+                      }
+                      className="bg-white rounded-full p-3 shadow-sm"
+                    >
+                      <Plus />
+                    </button>
                   </div>
-
-                  <div className="bg-blue-50 rounded-xl p-3 text-center">
-                    <p className="text-sm text-blue-700">Total calculado</p>
-                    <strong className="text-3xl text-blue-900">
-                      {calcularTotal(produto)}
-                    </strong>
-                    <p className="text-xs text-blue-700">unidades</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between mt-4">
-                  <button
-                    onClick={() =>
-                      alterarCampo(produto.id, "unidades_avulsas", -1)
-                    }
-                    className="bg-gray-100 rounded-full p-3"
-                  >
-                    <Minus />
-                  </button>
-
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={produto.unidades_avulsas}
-                    onChange={(e) =>
-                      digitarCampo(
-                        produto.id,
-                        "unidades_avulsas",
-                        e.target.value,
-                      )
-                    }
-                    className="w-28 text-center text-3xl font-bold border rounded-xl p-2"
-                  />
-
-                  <button
-                    onClick={() =>
-                      alterarCampo(produto.id, "unidades_avulsas", 1)
-                    }
-                    className="bg-gray-100 rounded-full p-3"
-                  >
-                    <Plus />
-                  </button>
                 </div>
               )}
             </div>
