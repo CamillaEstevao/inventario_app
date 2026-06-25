@@ -13,6 +13,7 @@ import { supabase } from "../services/supabase";
 export default function Inventario() {
   const [produtos, setProdutos] = useState([]);
   const [busca, setBusca] = useState("");
+  const [categoriaFiltro, setCategoriaFiltro] = useState("Todos");
   const [salvando, setSalvando] = useState(false);
 
   async function buscarProdutos() {
@@ -25,6 +26,7 @@ export default function Inventario() {
       setProdutos(
         data.map((produto) => ({
           ...produto,
+          categoria: produto.categoria || "Geral",
           contado: false,
         })),
       );
@@ -110,19 +112,39 @@ export default function Inventario() {
   function enviarWhatsApp() {
     let texto = "📦 INVENTÁRIO\n\n";
 
-    produtos.forEach((produto) => {
-      texto += `✅ ${produto.nome}\n`;
-      texto += `Qtd: ${produto.quantidade}\n\n`;
+    const categorias = ["Expedição", "Geral"];
+
+    categorias.forEach((categoria) => {
+      const itensCategoria = produtos.filter(
+        (produto) => (produto.categoria || "Geral") === categoria,
+      );
+
+      if (itensCategoria.length > 0) {
+        texto += `*${categoria}*\n\n`;
+
+        itensCategoria.forEach((produto) => {
+          texto += `✅ ${produto.nome}\n`;
+          texto += `Qtd: ${produto.quantidade}\n\n`;
+        });
+      }
     });
 
     window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank");
   }
 
-  const filtrados = produtos.filter((produto) =>
-    produto.nome.toLowerCase().includes(busca.toLowerCase()),
-  );
+  const filtrados = produtos.filter((produto) => {
+    const nomeCombina = produto.nome
+      .toLowerCase()
+      .includes(busca.toLowerCase());
 
-  const totalItens = produtos.reduce(
+    const categoriaCombina =
+      categoriaFiltro === "Todos" ||
+      (produto.categoria || "Geral") === categoriaFiltro;
+
+    return nomeCombina && categoriaCombina;
+  });
+
+  const totalItens = filtrados.reduce(
     (soma, produto) => soma + Number(produto.quantidade || 0),
     0,
   );
@@ -152,7 +174,7 @@ export default function Inventario() {
       </header>
 
       <main className="p-4">
-        <div className="bg-white rounded-xl p-3 flex gap-2 shadow mb-4">
+        <div className="bg-white rounded-xl p-3 flex gap-2 shadow mb-3">
           <Search />
           <input
             value={busca}
@@ -160,6 +182,22 @@ export default function Inventario() {
             placeholder="Buscar produto..."
             className="outline-none w-full bg-transparent"
           />
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {["Todos", "Expedição", "Geral"].map((categoria) => (
+            <button
+              key={categoria}
+              onClick={() => setCategoriaFiltro(categoria)}
+              className={`p-3 rounded-xl font-bold text-sm ${
+                categoriaFiltro === categoria
+                  ? "bg-[#102d5c] text-white"
+                  : "bg-white text-gray-600"
+              }`}
+            >
+              {categoria}
+            </button>
+          ))}
         </div>
 
         <div className="space-y-4">
@@ -189,6 +227,7 @@ export default function Inventario() {
                   </div>
 
                   <p className="text-sm text-gray-400">
+                    {produto.categoria || "Geral"} •{" "}
                     {produto.contado ? "Conferido" : "Aguardando contagem"}
                   </p>
                 </div>
@@ -224,7 +263,7 @@ export default function Inventario() {
         </div>
 
         <div className="bg-white rounded-2xl p-4 shadow mt-5">
-          <p className="text-gray-500">Total de itens</p>
+          <p className="text-gray-500">Total de itens filtrados</p>
           <strong className="text-3xl">{totalItens}</strong>
         </div>
 

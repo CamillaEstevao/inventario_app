@@ -10,6 +10,7 @@ export default function Produtos() {
 
   const [nome, setNome] = useState("");
   const [quantidade, setQuantidade] = useState("");
+  const [categoria, setCategoria] = useState("Geral");
   const [foto, setFoto] = useState("");
   const [arquivo, setArquivo] = useState(null);
   const [preview, setPreview] = useState("");
@@ -22,7 +23,6 @@ export default function Produtos() {
       .order("id", { ascending: false });
 
     if (error) {
-      console.log(error);
       alert(error.message);
       return;
     }
@@ -36,7 +36,6 @@ export default function Produtos() {
 
   function selecionarFoto(e) {
     const file = e.target.files?.[0];
-
     if (!file) return;
 
     setArquivo(file);
@@ -44,36 +43,33 @@ export default function Produtos() {
   }
 
   async function enviarFoto() {
-    if (!arquivo) {
-      return foto || "";
-    }
+    if (!arquivo) return foto || "";
 
     const extensao = arquivo.name.split(".").pop();
     const nomeArquivo = `${Date.now()}-${Math.random()
       .toString(36)
       .substring(2)}.${extensao}`;
 
-    const { error: uploadError } = await supabase.storage
+    const { error } = await supabase.storage
       .from("produtos")
       .upload(nomeArquivo, arquivo, {
         upsert: false,
         contentType: arquivo.type,
       });
 
-    if (uploadError) {
-      console.log(uploadError);
+    if (error) {
       alert("Erro no upload da imagem");
       return "";
     }
 
     const url = supabase.storage.from("produtos").getPublicUrl(nomeArquivo);
-
     return url.data.publicUrl;
   }
 
   function limparForm() {
     setNome("");
     setQuantidade("");
+    setCategoria("Geral");
     setFoto("");
     setArquivo(null);
     setPreview("");
@@ -91,6 +87,7 @@ export default function Produtos() {
     setEditando(produto);
     setNome(produto.nome || "");
     setQuantidade(String(produto.quantidade ?? 0));
+    setCategoria(produto.categoria || "Geral");
     setFoto(produto.foto || "");
     setPreview(produto.foto || "");
     setArquivo(null);
@@ -115,6 +112,7 @@ export default function Produtos() {
     const produtoPayload = {
       nome: nome.trim(),
       quantidade: Number(quantidade || 0),
+      categoria,
       foto: fotoFinal || foto || "",
     };
 
@@ -127,7 +125,6 @@ export default function Produtos() {
         .single();
 
       if (error) {
-        console.log(error);
         alert(error.message);
         setSalvando(false);
         return;
@@ -144,7 +141,6 @@ export default function Produtos() {
         .single();
 
       if (error) {
-        console.log(error);
         alert(error.message);
         setSalvando(false);
         return;
@@ -158,13 +154,11 @@ export default function Produtos() {
 
   async function excluirProduto(id) {
     const confirmar = confirm("Deseja excluir esse produto?");
-
     if (!confirmar) return;
 
     const { error } = await supabase.from("produtos").delete().eq("id", id);
 
     if (error) {
-      console.log(error);
       alert(error.message);
       return;
     }
@@ -198,7 +192,9 @@ export default function Produtos() {
               />
 
               <h2 className="font-bold mt-3">{produto.nome}</h2>
-
+              <p className="text-sm text-gray-500">
+                {produto.categoria || "Geral"}
+              </p>
               <p>Qtd: {produto.quantidade}</p>
 
               <div className="flex gap-3 mt-3">
@@ -283,6 +279,15 @@ export default function Produtos() {
               onChange={(e) => setQuantidade(e.target.value)}
               className="border p-3 rounded-xl w-full"
             />
+
+            <select
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+              className="border p-3 rounded-xl w-full bg-white"
+            >
+              <option value="Geral">Geral</option>
+              <option value="Expedição">Expedição</option>
+            </select>
 
             <button
               onClick={salvarProduto}
