@@ -208,17 +208,29 @@ export default function Produtos() {
               />
             )}
 
-            <label className="border p-4 rounded-xl flex gap-2 items-center cursor-pointer">
-              <Camera />
-              Tirar foto
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                hidden
-                onChange={selecionarFoto}
-              />
-            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="border p-4 rounded-xl flex gap-2 items-center justify-center cursor-pointer">
+                <Camera />
+                Câmera
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  hidden
+                  onChange={selecionarFoto}
+                />
+              </label>
+
+              <label className="border p-4 rounded-xl flex gap-2 items-center justify-center cursor-pointer">
+                🖼️ Galeria
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={selecionarFoto}
+                />
+              </label>
+            </div>
 
             <input
               placeholder="Nome"
