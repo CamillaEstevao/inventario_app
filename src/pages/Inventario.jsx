@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { Search, Minus, Plus, Save, MessageCircle } from "lucide-react";
+import {
+  Search,
+  Minus,
+  Plus,
+  Save,
+  MessageCircle,
+  CheckCircle,
+} from "lucide-react";
 import BottomMenu from "../components/BottomMenu";
 import { supabase } from "../services/supabase";
 
@@ -48,7 +55,7 @@ export default function Inventario() {
         produto.id === id
           ? {
               ...produto,
-              quantidade: Number(valor),
+              quantidade: Math.max(0, Number(valor || 0)),
               contado: true,
             }
           : produto
@@ -123,13 +130,24 @@ export default function Inventario() {
 
   const produtosContados = produtos.filter((produto) => produto.contado).length;
 
+  const progresso =
+    produtos.length > 0 ? Math.round((produtosContados / produtos.length) * 100) : 0;
+
   return (
     <div className="min-h-screen pb-32 bg-gray-100">
       <header className="bg-[#102d5c] text-white p-5">
         <h1 className="text-2xl font-bold">Inventário</h1>
+
         <p className="text-sm opacity-80">
           {produtosContados} de {produtos.length} produtos conferidos
         </p>
+
+        <div className="w-full bg-white/20 rounded-full h-2 mt-3">
+          <div
+            className="bg-white h-2 rounded-full transition-all"
+            style={{ width: `${progresso}%` }}
+          />
+        </div>
       </header>
 
       <main className="p-4">
@@ -143,15 +161,37 @@ export default function Inventario() {
           />
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {filtrados.map((produto) => (
             <div
               key={produto.id}
-              className={`rounded-2xl p-4 shadow bg-white border ${
+              className={`bg-white rounded-2xl p-4 shadow border transition-all ${
                 produto.contado ? "border-green-500" : "border-transparent"
               }`}
             >
-              <h2 className="font-bold text-lg">{produto.nome}</h2>
+              <div className="flex gap-4 items-center">
+                <img
+                  src={produto.foto || "https://via.placeholder.com/100"}
+                  alt={produto.nome}
+                  className="w-20 h-20 rounded-xl object-cover bg-gray-100"
+                />
+
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-bold text-lg leading-tight">
+                      {produto.nome}
+                    </h2>
+
+                    {produto.contado && (
+                      <CheckCircle size={18} className="text-green-600" />
+                    )}
+                  </div>
+
+                  <p className="text-sm text-gray-400">
+                    {produto.contado ? "Conferido" : "Aguardando contagem"}
+                  </p>
+                </div>
+              </div>
 
               <div className="flex items-center justify-between mt-4">
                 <button
@@ -163,9 +203,10 @@ export default function Inventario() {
 
                 <input
                   type="number"
+                  inputMode="numeric"
                   value={produto.quantidade}
                   onChange={(e) => digitarQuantidade(produto.id, e.target.value)}
-                  className="w-24 text-center text-3xl font-bold border rounded-xl p-2"
+                  className="w-28 text-center text-3xl font-bold border rounded-xl p-2"
                 />
 
                 <button
