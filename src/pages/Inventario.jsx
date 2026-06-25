@@ -26,7 +26,7 @@ export default function Inventario() {
         data.map((produto) => ({
           ...produto,
           contado: false,
-        }))
+        })),
       );
     }
   }
@@ -44,8 +44,8 @@ export default function Inventario() {
               quantidade: Math.max(0, Number(produto.quantidade || 0) + valor),
               contado: true,
             }
-          : produto
-      )
+          : produto,
+      ),
     );
   }
 
@@ -58,8 +58,8 @@ export default function Inventario() {
               quantidade: Math.max(0, Number(valor || 0)),
               contado: true,
             }
-          : produto
-      )
+          : produto,
+      ),
     );
   }
 
@@ -68,7 +68,7 @@ export default function Inventario() {
 
     const total = produtos.reduce(
       (soma, produto) => soma + Number(produto.quantidade || 0),
-      0
+      0,
     );
 
     const { data: inventario, error } = await supabase
@@ -111,27 +111,28 @@ export default function Inventario() {
     let texto = "📦 INVENTÁRIO\n\n";
 
     produtos.forEach((produto) => {
-      texto += `${produto.nome} - Qtd: ${produto.quantidade}\n`;
+      texto += `✅ ${produto.nome}\n`;
+      texto += `Qtd: ${produto.quantidade}\n\n`;
     });
-
-    texto += `\nTotal de itens: ${totalItens}`;
 
     window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank");
   }
 
   const filtrados = produtos.filter((produto) =>
-    produto.nome.toLowerCase().includes(busca.toLowerCase())
+    produto.nome.toLowerCase().includes(busca.toLowerCase()),
   );
 
   const totalItens = produtos.reduce(
     (soma, produto) => soma + Number(produto.quantidade || 0),
-    0
+    0,
   );
 
   const produtosContados = produtos.filter((produto) => produto.contado).length;
 
   const progresso =
-    produtos.length > 0 ? Math.round((produtosContados / produtos.length) * 100) : 0;
+    produtos.length > 0
+      ? Math.round((produtosContados / produtos.length) * 100)
+      : 0;
 
   return (
     <div className="min-h-screen pb-32 bg-gray-100">
@@ -205,7 +206,9 @@ export default function Inventario() {
                   type="number"
                   inputMode="numeric"
                   value={produto.quantidade}
-                  onChange={(e) => digitarQuantidade(produto.id, e.target.value)}
+                  onChange={(e) =>
+                    digitarQuantidade(produto.id, e.target.value)
+                  }
                   className="w-28 text-center text-3xl font-bold border rounded-xl p-2"
                 />
 

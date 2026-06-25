@@ -10,7 +10,8 @@ export default function Relatorios() {
   async function buscarRelatorios() {
     const { data, error } = await supabase
       .from("inventarios")
-      .select(`
+      .select(
+        `
         id,
         data,
         total_itens,
@@ -21,7 +22,8 @@ export default function Relatorios() {
             nome
           )
         )
-      `)
+      `,
+      )
       .order("data", { ascending: false });
 
     if (!error) {
@@ -36,16 +38,12 @@ export default function Relatorios() {
   }, []);
 
   function enviarRelatorioWhatsApp(inventario) {
-    let texto = `📊 RELATÓRIO DE INVENTÁRIO\n\n`;
-    texto += `Data: ${new Date(inventario.data).toLocaleDateString("pt-BR")}\n\n`;
+    let texto = "📦 INVENTÁRIO\n\n";
 
     inventario.inventario_itens.forEach((item) => {
-      texto += `${item.produtos?.nome || "Produto removido"} - Qtd: ${
-        item.quantidade
-      }\n`;
+      texto += `✅ ${item.produtos?.nome || "Produto removido"}\n`;
+      texto += `Qtd: ${item.quantidade}\n\n`;
     });
-
-    texto += `\nTotal de itens: ${inventario.total_itens}`;
 
     window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank");
   }
@@ -68,7 +66,10 @@ export default function Relatorios() {
 
         <div className="space-y-5">
           {inventarios.map((inventario) => (
-            <div key={inventario.id} className="bg-white rounded-2xl p-4 shadow">
+            <div
+              key={inventario.id}
+              className="bg-white rounded-2xl p-4 shadow"
+            >
               <div className="flex gap-3 items-center">
                 <FileText />
 
