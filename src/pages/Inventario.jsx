@@ -27,6 +27,10 @@ export default function Inventario() {
         data.map((produto) => ({
           ...produto,
           categoria: produto.categoria || "Geral",
+          tipo_contagem: produto.tipo_contagem || "unidade",
+          unidades_por_pacote: produto.unidades_por_pacote || 1,
+          pacotes: 0,
+          unidades_avulsas: Number(produto.quantidade || 0),
           contado: false,
         })),
       );
@@ -37,13 +41,25 @@ export default function Inventario() {
     buscarProdutos();
   }, []);
 
-  function alterarQuantidade(id, valor) {
+  function calcularTotal(produto) {
+    if (produto.tipo_contagem === "pacote") {
+      return (
+        Number(produto.pacotes || 0) *
+          Number(produto.unidades_por_pacote || 1) +
+        Number(produto.unidades_avulsas || 0)
+      );
+    }
+
+    return Number(produto.unidades_avulsas || 0);
+  }
+
+  function alterarCampo(id, campo, valor) {
     setProdutos((lista) =>
       lista.map((produto) =>
         produto.id === id
           ? {
               ...produto,
-              quantidade: Math.max(0, Number(produto.quantidade || 0) + valor),
+              [campo]: Math.max(0, Number(produto[campo] || 0) + valor),
               contado: true,
             }
           : produto,
@@ -51,13 +67,13 @@ export default function Inventario() {
     );
   }
 
-  function digitarQuantidade(id, valor) {
+  function digitarCampo(id, campo, valor) {
     setProdutos((lista) =>
       lista.map((produto) =>
         produto.id === id
           ? {
               ...produto,
-              quantidade: Math.max(0, Number(valor || 0)),
+              [campo]: Math.max(0, Number(valor || 0)),
               contado: true,
             }
           : produto,
@@ -69,7 +85,7 @@ export default function Inventario() {
     setSalvando(true);
 
     const total = produtos.reduce(
-      (soma, produto) => soma + Number(produto.quantidade || 0),
+      (soma, produto) => soma + calcularTotal(produto),
       0,
     );
 
@@ -90,7 +106,11 @@ export default function Inventario() {
     const itens = produtos.map((produto) => ({
       inventario_id: inventario.id,
       produto_id: produto.id,
-      quantidade: Number(produto.quantidade || 0),
+      quantidade: calcularTotal(produto),
+      pacotes:
+        produto.tipo_contagem === "pacote" ? Number(produto.pacotes || 0) : 0,
+      unidades_avulsas: Number(produto.unidades_avulsas || 0),
+      total_unidades: calcularTotal(produto),
     }));
 
     await supabase.from("inventario_itens").insert(itens);
@@ -99,7 +119,7 @@ export default function Inventario() {
       await supabase
         .from("produtos")
         .update({
-          quantidade: Number(produto.quantidade || 0),
+          quantidade: calcularTotal(produto),
         })
         .eq("id", produto.id);
     }
@@ -124,7 +144,14 @@ export default function Inventario() {
 
         itensCategoria.forEach((produto) => {
           texto += `✅ ${produto.nome}\n`;
-          texto += `Qtd: ${produto.quantidade}\n\n`;
+
+          if (produto.tipo_contagem === "pacote") {
+            texto += `Pacotes: ${produto.pacotes}\n`;
+            texto += `Unidades avulsas: ${produto.unidades_avulsas}\n`;
+            texto += `Total: ${calcularTotal(produto)} unidades\n\n`;
+          } else {
+            texto += `Qtd: ${calcularTotal(produto)}\n\n`;
+          }
         });
       }
     });
@@ -145,7 +172,7 @@ export default function Inventario() {
   });
 
   const totalItens = filtrados.reduce(
-    (soma, produto) => soma + Number(produto.quantidade || 0),
+    (soma, produto) => soma + calcularTotal(produto),
     0,
   );
 
@@ -230,34 +257,132 @@ export default function Inventario() {
                     {produto.categoria || "Geral"} •{" "}
                     {produto.contado ? "Conferido" : "Aguardando contagem"}
                   </p>
+
+                  {produto.tipo_contagem === "pacote" && (
+                    <p className="text-xs text-blue-700 mt-1">
+                      1 pacote = {produto.unidades_por_pacote} unidades
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between mt-4">
-                <button
-                  onClick={() => alterarQuantidade(produto.id, -1)}
-                  className="bg-gray-100 rounded-full p-3"
-                >
-                  <Minus />
-                </button>
+              {produto.tipo_contagem === "pacote" ? (
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">
+                      Pacotes fechados
+                    </p>
 
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={produto.quantidade}
-                  onChange={(e) =>
-                    digitarQuantidade(produto.id, e.target.value)
-                  }
-                  className="w-28 text-center text-3xl font-bold border rounded-xl p-2"
-                />
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={() => alterarCampo(produto.id, "pacotes", -1)}
+                        className="bg-gray-100 rounded-full p-3"
+                      >
+                        <Minus />
+                      </button>
 
-                <button
-                  onClick={() => alterarQuantidade(produto.id, 1)}
-                  className="bg-gray-100 rounded-full p-3"
-                >
-                  <Plus />
-                </button>
-              </div>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={produto.pacotes}
+                        onChange={(e) =>
+                          digitarCampo(produto.id, "pacotes", e.target.value)
+                        }
+                        className="w-28 text-center text-3xl font-bold border rounded-xl p-2"
+                      />
+
+                      <button
+                        onClick={() => alterarCampo(produto.id, "pacotes", 1)}
+                        className="bg-gray-100 rounded-full p-3"
+                      >
+                        <Plus />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">
+                      Unidades avulsas
+                    </p>
+
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={() =>
+                          alterarCampo(produto.id, "unidades_avulsas", -1)
+                        }
+                        className="bg-gray-100 rounded-full p-3"
+                      >
+                        <Minus />
+                      </button>
+
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={produto.unidades_avulsas}
+                        onChange={(e) =>
+                          digitarCampo(
+                            produto.id,
+                            "unidades_avulsas",
+                            e.target.value,
+                          )
+                        }
+                        className="w-28 text-center text-3xl font-bold border rounded-xl p-2"
+                      />
+
+                      <button
+                        onClick={() =>
+                          alterarCampo(produto.id, "unidades_avulsas", 1)
+                        }
+                        className="bg-gray-100 rounded-full p-3"
+                      >
+                        <Plus />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 rounded-xl p-3 text-center">
+                    <p className="text-sm text-blue-700">Total calculado</p>
+                    <strong className="text-3xl text-blue-900">
+                      {calcularTotal(produto)}
+                    </strong>
+                    <p className="text-xs text-blue-700">unidades</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between mt-4">
+                  <button
+                    onClick={() =>
+                      alterarCampo(produto.id, "unidades_avulsas", -1)
+                    }
+                    className="bg-gray-100 rounded-full p-3"
+                  >
+                    <Minus />
+                  </button>
+
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={produto.unidades_avulsas}
+                    onChange={(e) =>
+                      digitarCampo(
+                        produto.id,
+                        "unidades_avulsas",
+                        e.target.value,
+                      )
+                    }
+                    className="w-28 text-center text-3xl font-bold border rounded-xl p-2"
+                  />
+
+                  <button
+                    onClick={() =>
+                      alterarCampo(produto.id, "unidades_avulsas", 1)
+                    }
+                    className="bg-gray-100 rounded-full p-3"
+                  >
+                    <Plus />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

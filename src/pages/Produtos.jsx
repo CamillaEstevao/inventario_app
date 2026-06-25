@@ -11,6 +11,8 @@ export default function Produtos() {
   const [nome, setNome] = useState("");
   const [quantidade, setQuantidade] = useState("");
   const [categoria, setCategoria] = useState("Geral");
+  const [tipoContagem, setTipoContagem] = useState("unidade");
+  const [unidadesPorPacote, setUnidadesPorPacote] = useState(1);
   const [foto, setFoto] = useState("");
   const [arquivo, setArquivo] = useState(null);
   const [preview, setPreview] = useState("");
@@ -70,6 +72,8 @@ export default function Produtos() {
     setNome("");
     setQuantidade("");
     setCategoria("Geral");
+    setTipoContagem("unidade");
+    setUnidadesPorPacote(1);
     setFoto("");
     setArquivo(null);
     setPreview("");
@@ -88,6 +92,8 @@ export default function Produtos() {
     setNome(produto.nome || "");
     setQuantidade(String(produto.quantidade ?? 0));
     setCategoria(produto.categoria || "Geral");
+    setTipoContagem(produto.tipo_contagem || "unidade");
+    setUnidadesPorPacote(produto.unidades_por_pacote || 1);
     setFoto(produto.foto || "");
     setPreview(produto.foto || "");
     setArquivo(null);
@@ -113,6 +119,9 @@ export default function Produtos() {
       nome: nome.trim(),
       quantidade: Number(quantidade || 0),
       categoria,
+      tipo_contagem: tipoContagem,
+      unidades_por_pacote:
+        tipoContagem === "pacote" ? Number(unidadesPorPacote || 1) : 1,
       foto: fotoFinal || foto || "",
     };
 
@@ -192,10 +201,18 @@ export default function Produtos() {
               />
 
               <h2 className="font-bold mt-3">{produto.nome}</h2>
+
               <p className="text-sm text-gray-500">
                 {produto.categoria || "Geral"}
               </p>
-              <p>Qtd: {produto.quantidade}</p>
+
+              <p>Qtd total: {produto.quantidade}</p>
+
+              {produto.tipo_contagem === "pacote" && (
+                <p className="text-sm text-blue-700">
+                  1 pacote = {produto.unidades_por_pacote} unidades
+                </p>
+              )}
 
               <div className="flex gap-3 mt-3">
                 <button
@@ -281,9 +298,28 @@ export default function Produtos() {
               <option value="Expedição">Categoria: Expedição</option>
             </select>
 
+            <select
+              value={tipoContagem}
+              onChange={(e) => setTipoContagem(e.target.value)}
+              className="border p-3 rounded-xl w-full bg-white font-bold"
+            >
+              <option value="unidade">Contagem: Unidade simples</option>
+              <option value="pacote">Contagem: Pacote com unidades</option>
+            </select>
+
+            {tipoContagem === "pacote" && (
+              <input
+                type="number"
+                placeholder="Unidades por pacote. Ex: 100"
+                value={unidadesPorPacote}
+                onChange={(e) => setUnidadesPorPacote(e.target.value)}
+                className="border p-3 rounded-xl w-full"
+              />
+            )}
+
             <input
               type="number"
-              placeholder="Quantidade"
+              placeholder="Quantidade total em unidades"
               value={quantidade}
               onChange={(e) => setQuantidade(e.target.value)}
               className="border p-3 rounded-xl w-full"
