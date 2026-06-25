@@ -221,7 +221,7 @@ export default function Produtos() {
 
       {abrirForm && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
-          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-4 max-h-[90vh] overflow-y-auto space-y-3">
+          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-4 max-h-[95vh] overflow-y-auto space-y-3 pb-8">
             <div className="flex justify-between items-center">
               <h2 className="font-bold text-lg">
                 {editando ? "Editar Produto" : "Novo Produto"}
@@ -272,6 +272,15 @@ export default function Produtos() {
               className="border p-3 rounded-xl w-full"
             />
 
+            <select
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+              className="border p-3 rounded-xl w-full bg-white font-bold"
+            >
+              <option value="Geral">Categoria: Geral</option>
+              <option value="Expedição">Categoria: Expedição</option>
+            </select>
+
             <input
               type="number"
               placeholder="Quantidade"
@@ -279,15 +288,6 @@ export default function Produtos() {
               onChange={(e) => setQuantidade(e.target.value)}
               className="border p-3 rounded-xl w-full"
             />
-
-            <select
-              value={categoria}
-              onChange={(e) => setCategoria(e.target.value)}
-              className="border p-3 rounded-xl w-full bg-white"
-            >
-              <option value="Geral">Geral</option>
-              <option value="Expedição">Expedição</option>
-            </select>
 
             <button
               onClick={salvarProduto}
