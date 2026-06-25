@@ -11,20 +11,17 @@ export default function Produtos() {
   const [editando, setEditando] = useState(null);
 
   const [nome, setNome] = useState("");
-
   const [quantidade, setQuantidade] = useState("");
-
   const [foto, setFoto] = useState("");
 
   const [arquivo, setArquivo] = useState(null);
 
+  const [preview, setPreview] = useState("");
+
   async function buscarProdutos() {
     const { data, error } = await supabase
-
       .from("produtos")
-
       .select("*")
-
       .order("id", { ascending: false });
 
     if (!error) {
@@ -36,12 +33,22 @@ export default function Produtos() {
     buscarProdutos();
   }, []);
 
+  function selecionarFoto(e) {
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    setArquivo(file);
+
+    setPreview(URL.createObjectURL(file));
+  }
+
   async function enviarFoto() {
     if (!arquivo) {
-      return foto;
+      return foto || "";
     }
 
-    const nomeArquivo = Date.now() + "-" + arquivo.name;
+    const nomeArquivo = `${Date.now()}-${arquivo.name}`;
 
     const { error } = await supabase.storage
 
@@ -51,25 +58,39 @@ export default function Produtos() {
         nomeArquivo,
 
         arquivo,
+
+        {
+          cacheControl: "3600",
+
+          upsert: false,
+        },
       );
 
     if (error) {
-      alert(error.message);
+      console.log(error);
 
-      return null;
+      alert("Erro ao enviar foto");
+
+      return "";
     }
 
-    const url = supabase.storage
+    const resultado = supabase.storage
 
       .from("produtos")
 
-      .getPublicUrl(nomeArquivo).data.publicUrl;
+      .getPublicUrl(nomeArquivo);
 
-    return url;
+    return resultado.data.publicUrl;
   }
 
   async function salvarProduto() {
-    const fotoFinal = await enviarFoto();
+    if (!nome) {
+      alert("Digite o nome");
+
+      return;
+    }
+
+    let fotoFinal = await enviarFoto();
 
     if (editando) {
       await supabase
@@ -90,17 +111,21 @@ export default function Produtos() {
 
         .from("produtos")
 
-        .insert([
-          {
-            nome,
+        .insert({
+          nome,
 
-            quantidade: Number(quantidade),
+          quantidade: Number(quantidade),
 
-            foto: fotoFinal,
-          },
-        ]);
+          foto: fotoFinal,
+        });
     }
 
+    limparForm();
+
+    buscarProdutos();
+  }
+
+  function limparForm() {
     setNome("");
 
     setQuantidade("");
@@ -109,14 +134,14 @@ export default function Produtos() {
 
     setArquivo(null);
 
+    setPreview("");
+
     setEditando(null);
 
     setAbrirForm(false);
-
-    buscarProdutos();
   }
 
-  function editar(produto) {
+  function editarProduto(produto) {
     setEditando(produto);
 
     setNome(produto.nome);
@@ -124,6 +149,8 @@ export default function Produtos() {
     setQuantidade(produto.quantidade);
 
     setFoto(produto.foto || "");
+
+    setPreview(produto.foto || "");
 
     setAbrirForm(true);
   }
@@ -161,10 +188,10 @@ bg-[#102d5c]
 text-white
 p-4
 rounded-xl
-font-bold
 flex
 justify-center
 gap-2
+font-bold
 "
         >
           <Plus />
@@ -175,21 +202,52 @@ gap-2
           <div
             className="
 bg-white
-mt-5
 p-4
 rounded-xl
+mt-5
 shadow
 space-y-3
 "
           >
             <div className="flex justify-between">
-              <h2 className="font-bold">Produto</h2>
+              <h2 className="font-bold">Cadastro</h2>
 
-              <X
-                onClick={() => setAbrirForm(false)}
-                className="cursor-pointer"
-              />
+              <X onClick={limparForm} />
             </div>
+
+            {preview && (
+              <img
+                src={preview}
+                className="
+w-full
+h-48
+object-cover
+rounded-xl
+"
+              />
+            )}
+
+            <label
+              className="
+border
+p-4
+rounded-xl
+flex
+gap-2
+items-center
+cursor-pointer
+"
+            >
+              <Camera />
+              Tirar foto
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+                onChange={selecionarFoto}
+              />
+            </label>
 
             <input
               placeholder="Nome"
@@ -216,36 +274,14 @@ w-full
 "
             />
 
-            <label
-              className="
-border
-p-4
-rounded-xl
-flex
-gap-2
-items-center
-cursor-pointer
-"
-            >
-              <Camera />
-              Adicionar foto
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                hidden
-                onChange={(e) => setArquivo(e.target.files[0])}
-              />
-            </label>
-
             <button
               onClick={salvarProduto}
               className="
 bg-green-600
 text-white
-w-full
 p-3
 rounded-xl
+w-full
 "
             >
               Salvar
@@ -280,8 +316,13 @@ rounded-xl
 
               <div className="flex gap-3 mt-3">
                 <button
-                  onClick={() => editar(produto)}
-                  className="flex-1 bg-gray-100 p-3 rounded-xl"
+                  onClick={() => editarProduto(produto)}
+                  className="
+flex-1
+bg-gray-100
+p-3
+rounded-xl
+"
                 >
                   <Pencil />
                   Editar
