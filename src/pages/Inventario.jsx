@@ -24,15 +24,28 @@ export default function Inventario() {
 
     if (!error) {
       setProdutos(
-        data.map((produto) => ({
-          ...produto,
-          categoria: produto.categoria || "Geral",
-          tipo_contagem: produto.tipo_contagem || "unidade",
-          unidades_por_pacote: produto.unidades_por_pacote || 1,
-          pacotes: 0,
-          unidades_avulsas: Number(produto.quantidade || 0),
-          contado: false,
-        })),
+        data.map((produto) => {
+          const total = Number(produto.quantidade || 0);
+          const unidadesPorPacote = Number(produto.unidades_por_pacote || 1);
+          const tipoContagem = produto.tipo_contagem || "unidade";
+
+          return {
+            ...produto,
+            categoria: produto.categoria || "Geral",
+            tipo_contagem: tipoContagem,
+            unidades_por_pacote: unidadesPorPacote,
+
+            pacotes:
+              tipoContagem === "pacote"
+                ? Math.floor(total / unidadesPorPacote)
+                : 0,
+
+            unidades_avulsas:
+              tipoContagem === "pacote" ? total % unidadesPorPacote : total,
+
+            contado: false,
+          };
+        }),
       );
     }
   }
@@ -203,6 +216,7 @@ export default function Inventario() {
       <main className="p-4">
         <div className="bg-white rounded-xl p-3 flex gap-2 shadow mb-3">
           <Search />
+
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -356,9 +370,11 @@ export default function Inventario() {
 
                   <div className="bg-blue-50 rounded-xl p-3 text-center mt-6">
                     <p className="text-sm text-blue-700">Total calculado</p>
+
                     <strong className="text-3xl text-blue-900">
                       {calcularTotal(produto)}
                     </strong>
+
                     <p className="text-xs text-blue-700">unidades</p>
                   </div>
                 </div>
