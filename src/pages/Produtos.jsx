@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Pencil, X, Camera } from "lucide-react";
+import { Plus, Trash2, Pencil, X, Camera, Image } from "lucide-react";
 import BottomMenu from "../components/BottomMenu";
 import { supabase } from "../services/supabase";
 
@@ -35,7 +35,7 @@ export default function Produtos() {
   }, []);
 
   function selecionarFoto(e) {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
 
     if (!file) return;
 
@@ -48,12 +48,16 @@ export default function Produtos() {
       return foto || "";
     }
 
-    const nomeArquivo = `${Date.now()}-${arquivo.name}`;
+    const extensao = arquivo.name.split(".").pop();
+    const nomeArquivo = `${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2)}.${extensao}`;
 
     const { error: uploadError } = await supabase.storage
       .from("produtos")
       .upload(nomeArquivo, arquivo, {
         upsert: false,
+        contentType: arquivo.type,
       });
 
     if (uploadError) {
@@ -65,6 +69,32 @@ export default function Produtos() {
     const url = supabase.storage.from("produtos").getPublicUrl(nomeArquivo);
 
     return url.data.publicUrl;
+  }
+
+  function limparForm() {
+    setNome("");
+    setQuantidade("");
+    setFoto("");
+    setArquivo(null);
+    setPreview("");
+    setEditando(null);
+    setAbrirForm(false);
+    setSalvando(false);
+  }
+
+  function abrirNovoProduto() {
+    limparForm();
+    setAbrirForm(true);
+  }
+
+  function editarProduto(produto) {
+    setEditando(produto);
+    setNome(produto.nome || "");
+    setQuantidade(String(produto.quantidade ?? 0));
+    setFoto(produto.foto || "");
+    setPreview(produto.foto || "");
+    setArquivo(null);
+    setAbrirForm(true);
   }
 
   async function salvarProduto() {
@@ -82,16 +112,18 @@ export default function Produtos() {
       return;
     }
 
-    if (editando) {
+    const produtoPayload = {
+      nome: nome.trim(),
+      quantidade: Number(quantidade || 0),
+      foto: fotoFinal || foto || "",
+    };
+
+    if (editando?.id) {
       const { data, error } = await supabase
         .from("produtos")
-        .update({
-          nome: nome.trim(),
-          quantidade: Number(quantidade || 0),
-          foto: fotoFinal || foto,
-        })
+        .update(produtoPayload)
         .eq("id", editando.id)
-        .select()
+        .select("*")
         .single();
 
       if (error) {
@@ -101,18 +133,14 @@ export default function Produtos() {
         return;
       }
 
-      setProdutos((listaAtual) =>
-        listaAtual.map((produto) => (produto.id === data.id ? data : produto)),
+      setProdutos((lista) =>
+        lista.map((produto) => (produto.id === data.id ? data : produto)),
       );
     } else {
       const { data, error } = await supabase
         .from("produtos")
-        .insert({
-          nome: nome.trim(),
-          quantidade: Number(quantidade || 0),
-          foto: fotoFinal,
-        })
-        .select()
+        .insert(produtoPayload)
+        .select("*")
         .single();
 
       if (error) {
@@ -122,36 +150,10 @@ export default function Produtos() {
         return;
       }
 
-      setProdutos((listaAtual) => [data, ...listaAtual]);
+      setProdutos((lista) => [data, ...lista]);
     }
 
     limparForm();
-    setSalvando(false);
-  }
-
-  function limparForm() {
-    setNome("");
-    setQuantidade("");
-    setFoto("");
-    setArquivo(null);
-    setPreview("");
-    setEditando(null);
-    setAbrirForm(false);
-  }
-
-  function abrirNovoProduto() {
-    limparForm();
-    setAbrirForm(true);
-  }
-
-  function editarProduto(produto) {
-    setEditando(produto);
-    setNome(produto.nome || "");
-    setQuantidade(produto.quantidade || 0);
-    setFoto(produto.foto || "");
-    setPreview(produto.foto || "");
-    setArquivo(null);
-    setAbrirForm(true);
   }
 
   async function excluirProduto(id) {
@@ -167,9 +169,7 @@ export default function Produtos() {
       return;
     }
 
-    setProdutos((listaAtual) =>
-      listaAtual.filter((produto) => produto.id !== id),
-    );
+    setProdutos((lista) => lista.filter((produto) => produto.id !== id));
   }
 
   return (
@@ -187,75 +187,6 @@ export default function Produtos() {
           <Plus />
           Novo Produto
         </button>
-
-        {abrirForm && (
-          <div className="bg-white p-4 rounded-xl mt-5 shadow space-y-3">
-            <div className="flex justify-between items-center">
-              <h2 className="font-bold">
-                {editando ? "Editar Produto" : "Cadastro"}
-              </h2>
-
-              <button onClick={limparForm}>
-                <X />
-              </button>
-            </div>
-
-            {preview && (
-              <img
-                src={preview}
-                alt="Prévia do produto"
-                className="w-full h-48 object-cover rounded-xl"
-              />
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <label className="border p-4 rounded-xl flex gap-2 items-center justify-center cursor-pointer">
-                <Camera />
-                Câmera
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  hidden
-                  onChange={selecionarFoto}
-                />
-              </label>
-
-              <label className="border p-4 rounded-xl flex gap-2 items-center justify-center cursor-pointer">
-                🖼️ Galeria
-                <input
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={selecionarFoto}
-                />
-              </label>
-            </div>
-
-            <input
-              placeholder="Nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              className="border p-3 rounded-xl w-full"
-            />
-
-            <input
-              type="number"
-              placeholder="Quantidade"
-              value={quantidade}
-              onChange={(e) => setQuantidade(e.target.value)}
-              className="border p-3 rounded-xl w-full"
-            />
-
-            <button
-              onClick={salvarProduto}
-              disabled={salvando}
-              className="bg-green-600 text-white p-3 rounded-xl w-full font-bold disabled:opacity-60"
-            >
-              {salvando ? "Salvando..." : "Salvar"}
-            </button>
-          </div>
-        )}
 
         <div className="mt-5 space-y-4">
           {produtos.map((produto) => (
@@ -291,6 +222,78 @@ export default function Produtos() {
           ))}
         </div>
       </main>
+
+      {abrirForm && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
+          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-4 max-h-[90vh] overflow-y-auto space-y-3">
+            <div className="flex justify-between items-center">
+              <h2 className="font-bold text-lg">
+                {editando ? "Editar Produto" : "Novo Produto"}
+              </h2>
+
+              <button onClick={limparForm}>
+                <X />
+              </button>
+            </div>
+
+            {preview && (
+              <img
+                src={preview}
+                alt="Prévia do produto"
+                className="w-full h-48 object-cover rounded-xl bg-gray-100"
+              />
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="border p-4 rounded-xl flex gap-2 items-center justify-center cursor-pointer">
+                <Camera size={20} />
+                Câmera
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  hidden
+                  onChange={selecionarFoto}
+                />
+              </label>
+
+              <label className="border p-4 rounded-xl flex gap-2 items-center justify-center cursor-pointer">
+                <Image size={20} />
+                Galeria
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={selecionarFoto}
+                />
+              </label>
+            </div>
+
+            <input
+              placeholder="Nome"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              className="border p-3 rounded-xl w-full"
+            />
+
+            <input
+              type="number"
+              placeholder="Quantidade"
+              value={quantidade}
+              onChange={(e) => setQuantidade(e.target.value)}
+              className="border p-3 rounded-xl w-full"
+            />
+
+            <button
+              onClick={salvarProduto}
+              disabled={salvando}
+              className="bg-green-600 text-white p-3 rounded-xl w-full font-bold disabled:opacity-60"
+            >
+              {salvando ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <BottomMenu />
     </div>
