@@ -6,6 +6,9 @@ import {
   Save,
   MessageCircle,
   CheckCircle,
+  ClipboardList,
+  Package,
+  Filter,
 } from "lucide-react";
 import BottomMenu from "../components/BottomMenu";
 import { supabase } from "../services/supabase";
@@ -34,15 +37,12 @@ export default function Inventario() {
             categoria: produto.categoria || "Geral",
             tipo_contagem: tipoContagem,
             unidades_por_pacote: unidadesPorPacote,
-
             pacotes:
               tipoContagem === "pacote"
                 ? Math.floor(total / unidadesPorPacote)
                 : 0,
-
             unidades_avulsas:
               tipoContagem === "pacote" ? total % unidadesPorPacote : total,
-
             contado: false,
           };
         }),
@@ -143,7 +143,7 @@ export default function Inventario() {
   }
 
   function enviarWhatsApp() {
-    let texto = "📦 INVENTÁRIO\n\n";
+    let texto = "📦 INVENTÁRIO NX\n\n";
 
     const categorias = ["Expedição", "Geral"];
 
@@ -168,6 +168,9 @@ export default function Inventario() {
         });
       }
     });
+
+    texto += "Gerado por Inventário NX\n";
+    texto += "Powered by NexCode Studio";
 
     window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank");
   }
@@ -197,43 +200,66 @@ export default function Inventario() {
       : 0;
 
   return (
-    <div className="min-h-screen pb-32 bg-gray-100">
-      <header className="bg-[#102d5c] text-white p-5">
-        <h1 className="text-2xl font-bold">Inventário</h1>
+    <div className="min-h-screen pb-32 bg-[#f5f7fb]">
+      <header className="bg-[#102d5c] text-white p-5 rounded-b-3xl shadow">
+        <div className="flex items-center gap-4">
+          <div className="bg-white/10 w-14 h-14 rounded-2xl flex items-center justify-center">
+            <ClipboardList size={30} />
+          </div>
 
-        <p className="text-sm opacity-80">
-          {produtosContados} de {produtos.length} produtos conferidos
-        </p>
+          <div>
+            <p className="text-sm opacity-80">Inventário NX</p>
+            <h1 className="text-3xl font-bold">Inventário</h1>
+            <p className="text-sm opacity-80">Contagem semanal</p>
+          </div>
+        </div>
 
-        <div className="w-full bg-white/20 rounded-full h-2 mt-3">
-          <div
-            className="bg-white h-2 rounded-full transition-all"
-            style={{ width: `${progresso}%` }}
-          />
+        <div className="bg-white rounded-3xl p-4 mt-5 text-[#102d5c] shadow">
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-bold">Progresso do inventário</p>
+            <strong className="text-2xl">{progresso}%</strong>
+          </div>
+
+          <div className="w-full bg-gray-100 rounded-full h-3">
+            <div
+              className="bg-blue-600 h-3 rounded-full transition-all"
+              style={{ width: `${progresso}%` }}
+            />
+          </div>
+
+          <div className="flex justify-between mt-3 text-sm">
+            <span>
+              {produtosContados} de {produtos.length} produtos
+            </span>
+
+            <span className="text-green-600 font-bold">
+              {produtos.length - produtosContados} restantes
+            </span>
+          </div>
         </div>
       </header>
 
-      <main className="p-4">
-        <div className="bg-white rounded-xl p-3 flex gap-2 shadow mb-3">
-          <Search />
+      <main className="p-4 space-y-4">
+        <div className="bg-white rounded-2xl p-3 flex gap-3 items-center shadow">
+          <Search className="text-gray-400" />
 
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar produto..."
+            placeholder="Pesquisar produto..."
             className="outline-none w-full bg-transparent"
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-3 gap-2">
           {["Todos", "Expedição", "Geral"].map((categoria) => (
             <button
               key={categoria}
               onClick={() => setCategoriaFiltro(categoria)}
-              className={`p-3 rounded-xl font-bold text-sm ${
+              className={`p-3 rounded-2xl font-bold text-sm ${
                 categoriaFiltro === categoria
                   ? "bg-[#102d5c] text-white"
-                  : "bg-white text-gray-600"
+                  : "bg-white text-gray-600 shadow"
               }`}
             >
               {categoria}
@@ -241,11 +267,33 @@ export default function Inventario() {
           ))}
         </div>
 
+        <div className="bg-white rounded-3xl p-4 shadow">
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <Package className="mx-auto text-blue-700" />
+              <p className="text-xs text-gray-500 mt-2">Produtos</p>
+              <strong>{filtrados.length}</strong>
+            </div>
+
+            <div>
+              <CheckCircle className="mx-auto text-green-600" />
+              <p className="text-xs text-gray-500 mt-2">Conferidos</p>
+              <strong>{produtosContados}</strong>
+            </div>
+
+            <div>
+              <Filter className="mx-auto text-orange-500" />
+              <p className="text-xs text-gray-500 mt-2">Itens</p>
+              <strong>{totalItens}</strong>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-4">
           {filtrados.map((produto) => (
             <div
               key={produto.id}
-              className={`bg-white rounded-2xl p-4 shadow border transition-all ${
+              className={`bg-white rounded-3xl p-4 shadow border transition-all ${
                 produto.contado ? "border-green-500" : "border-transparent"
               }`}
             >
@@ -253,22 +301,29 @@ export default function Inventario() {
                 <img
                   src={produto.foto || "https://via.placeholder.com/100"}
                   alt={produto.nome}
-                  className="w-20 h-20 rounded-xl object-cover bg-gray-100"
+                  className="w-24 h-24 rounded-2xl object-cover bg-gray-100"
                 />
 
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-bold text-lg leading-tight">
-                      {produto.nome}
-                    </h2>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h2 className="font-bold text-lg leading-tight">
+                        {produto.nome}
+                      </h2>
+
+                      <p className="text-sm text-blue-700 font-semibold mt-1">
+                        {produto.categoria || "Geral"}
+                      </p>
+                    </div>
 
                     {produto.contado && (
-                      <CheckCircle size={18} className="text-green-600" />
+                      <div className="bg-green-50 text-green-600 rounded-full p-2">
+                        <CheckCircle size={20} />
+                      </div>
                     )}
                   </div>
 
-                  <p className="text-sm text-gray-400">
-                    {produto.categoria || "Geral"} •{" "}
+                  <p className="text-sm text-gray-400 mt-2">
                     {produto.contado ? "Conferido" : "Aguardando contagem"}
                   </p>
 
@@ -282,15 +337,15 @@ export default function Inventario() {
 
               {produto.tipo_contagem === "pacote" ? (
                 <div className="mt-4 space-y-4">
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-sm font-bold text-gray-600 mb-2">
+                  <div className="bg-gray-50 rounded-2xl p-4">
+                    <p className="text-sm font-bold text-gray-600 mb-3">
                       📦 Pacotes
                     </p>
 
                     <div className="flex items-center justify-between">
                       <button
                         onClick={() => alterarCampo(produto.id, "pacotes", -1)}
-                        className="bg-white rounded-full p-3 shadow-sm"
+                        className="bg-white rounded-full p-4 shadow-sm"
                       >
                         <Minus />
                       </button>
@@ -304,7 +359,7 @@ export default function Inventario() {
                             digitarCampo(produto.id, "pacotes", e.target.value)
                           }
                           placeholder="0"
-                          className="w-32 text-center text-3xl font-bold border rounded-xl p-2 pr-4"
+                          className="w-32 text-center text-4xl font-bold border rounded-2xl p-3"
                         />
 
                         <span className="absolute -bottom-5 left-0 right-0 text-center text-xs text-gray-500">
@@ -314,15 +369,15 @@ export default function Inventario() {
 
                       <button
                         onClick={() => alterarCampo(produto.id, "pacotes", 1)}
-                        className="bg-white rounded-full p-3 shadow-sm"
+                        className="bg-white rounded-full p-4 shadow-sm"
                       >
                         <Plus />
                       </button>
                     </div>
                   </div>
 
-                  <div className="bg-gray-50 rounded-xl p-3 mt-6">
-                    <p className="text-sm font-bold text-gray-600 mb-2">
+                  <div className="bg-gray-50 rounded-2xl p-4 mt-6">
+                    <p className="text-sm font-bold text-gray-600 mb-3">
                       📄 Unidades
                     </p>
 
@@ -331,7 +386,7 @@ export default function Inventario() {
                         onClick={() =>
                           alterarCampo(produto.id, "unidades_avulsas", -1)
                         }
-                        className="bg-white rounded-full p-3 shadow-sm"
+                        className="bg-white rounded-full p-4 shadow-sm"
                       >
                         <Minus />
                       </button>
@@ -349,7 +404,7 @@ export default function Inventario() {
                             )
                           }
                           placeholder="0"
-                          className="w-32 text-center text-3xl font-bold border rounded-xl p-2 pr-4"
+                          className="w-32 text-center text-4xl font-bold border rounded-2xl p-3"
                         />
 
                         <span className="absolute -bottom-5 left-0 right-0 text-center text-xs text-gray-500">
@@ -361,17 +416,17 @@ export default function Inventario() {
                         onClick={() =>
                           alterarCampo(produto.id, "unidades_avulsas", 1)
                         }
-                        className="bg-white rounded-full p-3 shadow-sm"
+                        className="bg-white rounded-full p-4 shadow-sm"
                       >
                         <Plus />
                       </button>
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 rounded-xl p-3 text-center mt-6">
+                  <div className="bg-blue-50 rounded-2xl p-4 text-center mt-6">
                     <p className="text-sm text-blue-700">Total calculado</p>
 
-                    <strong className="text-3xl text-blue-900">
+                    <strong className="text-4xl text-blue-900">
                       {calcularTotal(produto)}
                     </strong>
 
@@ -379,8 +434,8 @@ export default function Inventario() {
                   </div>
                 </div>
               ) : (
-                <div className="bg-gray-50 rounded-xl p-3 mt-4">
-                  <p className="text-sm font-bold text-gray-600 mb-2">
+                <div className="bg-gray-50 rounded-2xl p-4 mt-4">
+                  <p className="text-sm font-bold text-gray-600 mb-3">
                     📄 Unidades
                   </p>
 
@@ -389,7 +444,7 @@ export default function Inventario() {
                       onClick={() =>
                         alterarCampo(produto.id, "unidades_avulsas", -1)
                       }
-                      className="bg-white rounded-full p-3 shadow-sm"
+                      className="bg-white rounded-full p-4 shadow-sm"
                     >
                       <Minus />
                     </button>
@@ -407,7 +462,7 @@ export default function Inventario() {
                           )
                         }
                         placeholder="0"
-                        className="w-32 text-center text-3xl font-bold border rounded-xl p-2 pr-4"
+                        className="w-32 text-center text-4xl font-bold border rounded-2xl p-3"
                       />
 
                       <span className="absolute -bottom-5 left-0 right-0 text-center text-xs text-gray-500">
@@ -419,7 +474,7 @@ export default function Inventario() {
                       onClick={() =>
                         alterarCampo(produto.id, "unidades_avulsas", 1)
                       }
-                      className="bg-white rounded-full p-3 shadow-sm"
+                      className="bg-white rounded-full p-4 shadow-sm"
                     >
                       <Plus />
                     </button>
@@ -430,15 +485,15 @@ export default function Inventario() {
           ))}
         </div>
 
-        <div className="bg-white rounded-2xl p-4 shadow mt-5">
+        <div className="bg-white rounded-3xl p-4 shadow">
           <p className="text-gray-500">Total de itens filtrados</p>
-          <strong className="text-3xl">{totalItens}</strong>
+          <strong className="text-3xl text-[#102d5c]">{totalItens}</strong>
         </div>
 
         <button
           onClick={salvarInventario}
           disabled={salvando}
-          className="mt-5 w-full bg-green-600 text-white p-4 rounded-xl font-bold flex justify-center gap-2"
+          className="mt-5 w-full bg-green-600 text-white p-4 rounded-2xl font-bold flex justify-center gap-2 disabled:opacity-60"
         >
           <Save />
           {salvando ? "Salvando..." : "Salvar Inventário"}
@@ -446,7 +501,7 @@ export default function Inventario() {
 
         <button
           onClick={enviarWhatsApp}
-          className="mt-3 w-full bg-[#102d5c] text-white p-4 rounded-xl font-bold flex justify-center gap-2"
+          className="mt-3 w-full bg-[#102d5c] text-white p-4 rounded-2xl font-bold flex justify-center gap-2"
         >
           <MessageCircle />
           Enviar WhatsApp
