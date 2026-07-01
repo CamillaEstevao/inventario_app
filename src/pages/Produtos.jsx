@@ -43,6 +43,7 @@ export default function Produtos() {
   const [arquivo, setArquivo] = useState(null);
   const [preview, setPreview] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [estoqueMinimo, setEstoqueMinimo] = useState(10);
 
   async function buscarProdutos() {
     const { data, error } = await supabase
@@ -122,6 +123,7 @@ export default function Produtos() {
       limparForm();
       setCodigoBarras(codigo);
       setAbrirForm(true);
+      setEstoqueMinimo(10);
     }
   }
 
@@ -183,19 +185,20 @@ export default function Produtos() {
 
   function statusProduto(produto) {
     const qtd = Number(produto.quantidade || 0);
+    const minimo = Number(produto.estoque_minimo || 10);
 
-    if (qtd <= 3) {
+    if (qtd <= minimo) {
       return {
-        texto: "Crítico",
+        texto: `Abaixo do mínimo (${minimo})`,
         corTexto: "text-red-600",
         corBolinha: "bg-red-500",
         corBarra: "bg-red-500",
       };
     }
 
-    if (qtd <= 10) {
+    if (qtd <= minimo * 1.5) {
       return {
-        texto: "Estoque baixo",
+        texto: `Atenção • mínimo ${minimo}`,
         corTexto: "text-orange-600",
         corBolinha: "bg-orange-500",
         corBarra: "bg-orange-400",
@@ -203,7 +206,7 @@ export default function Produtos() {
     }
 
     return {
-      texto: "Em estoque",
+      texto: `Em estoque • mínimo ${minimo}`,
       corTexto: "text-green-600",
       corBolinha: "bg-green-500",
       corBarra: "bg-[#102d5c]",
@@ -219,6 +222,7 @@ export default function Produtos() {
     setUnidadesPorPacote(1);
     setPacotesEstoque(0);
     setUnidadesAvulsasEstoque(0);
+    setEstoqueMinimo(10);
     setFoto("");
     setArquivo(null);
     setPreview("");
@@ -256,6 +260,7 @@ export default function Produtos() {
     setPreview(produto.foto || "");
     setArquivo(null);
     setAbrirForm(true);
+    setEstoqueMinimo(produto.estoque_minimo || 10);
   }
 
   async function salvarProduto() {
@@ -279,6 +284,7 @@ export default function Produtos() {
       nome: nome.trim(),
       codigo_barras: codigoBarras.trim() || null,
       quantidade: quantidadeFinal,
+      estoque_minimo: Number(estoqueMinimo || 10),
       categoria,
       tipo_contagem: tipoContagem,
       unidades_por_pacote:
@@ -343,13 +349,19 @@ export default function Produtos() {
     0,
   );
 
-  const estoqueBaixo = produtos.filter(
-    (produto) => Number(produto.quantidade || 0) <= 10,
-  ).length;
+  const estoqueBaixo = produtos.filter((produto) => {
+    const qtd = Number(produto.quantidade || 0);
+    const minimo = Number(produto.estoque_minimo || 10);
 
-  const criticos = produtos.filter(
-    (produto) => Number(produto.quantidade || 0) <= 3,
-  ).length;
+    return qtd <= minimo;
+  }).length;
+
+  const criticos = produtos.filter((produto) => {
+    const qtd = Number(produto.quantidade || 0);
+    const minimo = Number(produto.estoque_minimo || 10);
+
+    return qtd <= Math.max(1, minimo / 2);
+  }).length;
 
   const categorias = ["Todos", "Expedição", "Geral"];
 
@@ -531,6 +543,11 @@ export default function Produtos() {
                         <span className="text-sm mb-1">un.</span>
                       </div>
                     </div>
+
+                    <p className="text-xs text-gray-500 mt-1">
+                      Estoque mínimo:{" "}
+                      <strong>{produto.estoque_minimo || 10}</strong> un.
+                    </p>
                   </div>
                 </div>
 
@@ -680,6 +697,14 @@ export default function Produtos() {
               placeholder="Código de barras"
               value={codigoBarras}
               onChange={(e) => setCodigoBarras(e.target.value)}
+              className="border p-3 rounded-xl w-full"
+            />
+
+            <input
+              type="number"
+              placeholder="Estoque mínimo. Ex: 20"
+              value={estoqueMinimo}
+              onChange={(e) => setEstoqueMinimo(e.target.value)}
               className="border p-3 rounded-xl w-full"
             />
 
