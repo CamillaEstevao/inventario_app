@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Pencil, X, Camera, Image } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Pencil,
+  X,
+  Camera,
+  Image,
+  Search,
+  Package,
+  Boxes,
+  AlertTriangle,
+  Filter,
+} from "lucide-react";
 import BottomMenu from "../components/BottomMenu";
 import { supabase } from "../services/supabase";
 
@@ -7,6 +19,10 @@ export default function Produtos() {
   const [produtos, setProdutos] = useState([]);
   const [abrirForm, setAbrirForm] = useState(false);
   const [editando, setEditando] = useState(null);
+
+  const [busca, setBusca] = useState("");
+  const [categoriaFiltro, setCategoriaFiltro] = useState("Todos");
+  const [ordem, setOrdem] = useState("recentes");
 
   const [nome, setNome] = useState("");
   const [quantidade, setQuantidade] = useState("");
@@ -80,6 +96,51 @@ export default function Produtos() {
     }
 
     return Number(quantidade || 0);
+  }
+
+  function calcularPacotes(produto) {
+    return Math.floor(
+      Number(produto.quantidade || 0) /
+        Number(produto.unidades_por_pacote || 1),
+    );
+  }
+
+  function calcularUnidadesAvulsas(produto) {
+    return (
+      Number(produto.quantidade || 0) % Number(produto.unidades_por_pacote || 1)
+    );
+  }
+
+  function statusProduto(produto) {
+    const qtd = Number(produto.quantidade || 0);
+
+    if (qtd <= 3) {
+      return {
+        texto: "Crítico",
+        corTexto: "text-red-600",
+        corBolinha: "bg-red-500",
+        corBarra: "bg-red-500",
+        fundo: "bg-red-50",
+      };
+    }
+
+    if (qtd <= 10) {
+      return {
+        texto: "Estoque baixo",
+        corTexto: "text-orange-600",
+        corBolinha: "bg-orange-500",
+        corBarra: "bg-orange-400",
+        fundo: "bg-orange-50",
+      };
+    }
+
+    return {
+      texto: "Em estoque",
+      corTexto: "text-green-600",
+      corBolinha: "bg-green-500",
+      corBarra: "bg-[#102d5c]",
+      fundo: "bg-green-50",
+    };
   }
 
   function limparForm() {
@@ -205,79 +266,249 @@ export default function Produtos() {
     setProdutos((lista) => lista.filter((produto) => produto.id !== id));
   }
 
+  const totalProdutos = produtos.length;
+
+  const totalItens = produtos.reduce(
+    (total, produto) => total + Number(produto.quantidade || 0),
+    0,
+  );
+
+  const estoqueBaixo = produtos.filter(
+    (produto) => Number(produto.quantidade || 0) <= 10,
+  ).length;
+
+  const criticos = produtos.filter(
+    (produto) => Number(produto.quantidade || 0) <= 3,
+  ).length;
+
+  const categorias = ["Todos", "Expedição", "Geral"];
+
+  const produtosFiltrados = produtos
+    .filter((produto) => {
+      const nomeCombina = produto.nome
+        .toLowerCase()
+        .includes(busca.toLowerCase());
+
+      const categoriaCombina =
+        categoriaFiltro === "Todos" ||
+        (produto.categoria || "Geral") === categoriaFiltro;
+
+      return nomeCombina && categoriaCombina;
+    })
+    .sort((a, b) => {
+      if (ordem === "nome") {
+        return a.nome.localeCompare(b.nome);
+      }
+
+      if (ordem === "menor") {
+        return Number(a.quantidade || 0) - Number(b.quantidade || 0);
+      }
+
+      if (ordem === "maior") {
+        return Number(b.quantidade || 0) - Number(a.quantidade || 0);
+      }
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  const maiorQuantidade =
+    produtos.length > 0
+      ? Math.max(...produtos.map((produto) => Number(produto.quantidade || 0)))
+      : 1;
+
   return (
-    <div className="min-h-screen pb-28 bg-gray-100">
-      <header className="bg-[#102d5c] text-white p-5">
-        <h1 className="text-xl font-bold">Produtos</h1>
-        <p className="text-sm opacity-80">Cadastro e edição de produtos</p>
+    <div className="min-h-screen pb-28 bg-[#f5f7fb]">
+      <header className="bg-[#102d5c] text-white p-5 rounded-b-3xl shadow">
+        <div className="flex items-center gap-4">
+          <div className="bg-white/10 w-14 h-14 rounded-2xl flex items-center justify-center">
+            <Package size={30} />
+          </div>
+
+          <div>
+            <p className="text-sm opacity-80">Inventário NX</p>
+            <h1 className="text-3xl font-bold">Produtos</h1>
+            <p className="text-sm opacity-80">
+              {totalProdutos} produtos cadastrados
+            </p>
+          </div>
+        </div>
       </header>
 
-      <main className="p-4">
-        <button
-          onClick={abrirNovoProduto}
-          className="w-full bg-[#102d5c] text-white p-4 rounded-xl flex justify-center gap-2 font-bold"
-        >
-          <Plus />
-          Novo Produto
-        </button>
+      <main className="p-4 space-y-4">
+        <div className="bg-white rounded-2xl p-3 flex gap-3 items-center shadow">
+          <Search className="text-gray-400" />
 
-        <div className="mt-5 space-y-4">
-          {produtos.map((produto) => (
-            <div key={produto.id} className="bg-white rounded-2xl p-4 shadow">
-              <img
-                src={produto.foto || "https://via.placeholder.com/200"}
-                alt={produto.nome}
-                className="w-full h-40 object-cover rounded-xl bg-gray-100"
-              />
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar produto..."
+            className="outline-none w-full bg-transparent"
+          />
+        </div>
 
-              <h2 className="font-bold mt-3">{produto.nome}</h2>
-
-              <p className="text-sm text-gray-500">
-                {produto.categoria || "Geral"}
-              </p>
-
-              <p>Total da semana: {produto.quantidade} unidades</p>
-
-              {produto.tipo_contagem === "pacote" && (
-                <div className="text-sm text-blue-700">
-                  <p>
-                    Equivale a:{" "}
-                    {Math.floor(
-                      Number(produto.quantidade || 0) /
-                        Number(produto.unidades_por_pacote || 1),
-                    )}{" "}
-                    pacote(s)
-                    {" + "}
-                    {Number(produto.quantidade || 0) %
-                      Number(produto.unidades_por_pacote || 1)}{" "}
-                    unidade(s)
-                  </p>
-
-                  <p>1 pacote = {produto.unidades_por_pacote} unidades</p>
-                </div>
-              )}
-
-              <div className="flex gap-3 mt-3">
-                <button
-                  onClick={() => editarProduto(produto)}
-                  className="flex-1 bg-gray-100 p-3 rounded-xl flex items-center justify-center gap-2"
-                >
-                  <Pencil size={18} />
-                  Editar
-                </button>
-
-                <button
-                  onClick={() => excluirProduto(produto.id)}
-                  className="flex-1 bg-red-50 text-red-500 p-3 rounded-xl flex items-center justify-center gap-2"
-                >
-                  <Trash2 size={18} />
-                  Excluir
-                </button>
-              </div>
-            </div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {categorias.map((item) => (
+            <button
+              key={item}
+              onClick={() => setCategoriaFiltro(item)}
+              className={`px-4 py-3 rounded-2xl font-bold text-sm whitespace-nowrap ${
+                categoriaFiltro === item
+                  ? "bg-[#102d5c] text-white"
+                  : "bg-white text-gray-600 shadow"
+              }`}
+            >
+              {item}
+            </button>
           ))}
         </div>
+
+        <div className="bg-white rounded-3xl p-4 shadow">
+          <div className="grid grid-cols-4 gap-3 text-center">
+            <div>
+              <Package className="mx-auto text-blue-700" />
+              <p className="text-xs text-gray-500 mt-2">Produtos</p>
+              <strong>{totalProdutos}</strong>
+            </div>
+
+            <div>
+              <Boxes className="mx-auto text-green-700" />
+              <p className="text-xs text-gray-500 mt-2">Itens</p>
+              <strong>{totalItens}</strong>
+            </div>
+
+            <div>
+              <Filter className="mx-auto text-orange-500" />
+              <p className="text-xs text-gray-500 mt-2">Baixo</p>
+              <strong>{estoqueBaixo}</strong>
+            </div>
+
+            <div>
+              <AlertTriangle className="mx-auto text-red-500" />
+              <p className="text-xs text-gray-500 mt-2">Crítico</p>
+              <strong>{criticos}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <p className="font-bold text-gray-700">
+            {produtosFiltrados.length} resultado(s)
+          </p>
+
+          <select
+            value={ordem}
+            onChange={(e) => setOrdem(e.target.value)}
+            className="bg-white border rounded-xl p-2 text-sm font-semibold"
+          >
+            <option value="recentes">Mais recentes</option>
+            <option value="nome">Nome A-Z</option>
+            <option value="menor">Menor estoque</option>
+            <option value="maior">Maior estoque</option>
+          </select>
+        </div>
+
+        <div className="space-y-4">
+          {produtosFiltrados.map((produto) => {
+            const status = statusProduto(produto);
+            const quantidadeAtual = Number(produto.quantidade || 0);
+            const largura = Math.max(
+              6,
+              (quantidadeAtual / maiorQuantidade) * 100,
+            );
+
+            return (
+              <div
+                key={produto.id}
+                className="bg-white rounded-3xl p-4 shadow border border-gray-100"
+              >
+                <div className="flex gap-4">
+                  <img
+                    src={produto.foto || "https://via.placeholder.com/100"}
+                    alt={produto.nome}
+                    className="w-24 h-24 rounded-2xl object-cover bg-gray-100"
+                  />
+
+                  <div className="flex-1 min-w-0">
+                    <h2 className="font-bold text-lg leading-tight">
+                      {produto.nome}
+                    </h2>
+
+                    <p className="text-sm text-blue-700 font-semibold mt-1">
+                      {produto.categoria || "Geral"}
+                    </p>
+
+                    <div className="mt-3">
+                      <p className="text-sm text-gray-500">Estoque</p>
+
+                      <div className="flex items-end gap-1">
+                        <strong className="text-3xl text-[#102d5c]">
+                          {produto.quantidade}
+                        </strong>
+
+                        <span className="text-sm mb-1">un.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${status.corBarra}`}
+                      style={{ width: `${largura}%` }}
+                    />
+                  </div>
+
+                  <div
+                    className={`inline-flex items-center gap-2 mt-3 text-sm font-semibold ${status.corTexto}`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${status.corBolinha}`}
+                    />
+                    {status.texto}
+                  </div>
+                </div>
+
+                {produto.tipo_contagem === "pacote" && (
+                  <div className="mt-3 rounded-2xl bg-blue-50 p-3 text-sm text-blue-800">
+                    <p>
+                      Equivale a: {calcularPacotes(produto)} pacote(s) +{" "}
+                      {calcularUnidadesAvulsas(produto)} unidade(s)
+                    </p>
+
+                    <p>1 pacote = {produto.unidades_por_pacote} unidades</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <button
+                    onClick={() => editarProduto(produto)}
+                    className="bg-gray-50 border p-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-[#102d5c]"
+                  >
+                    <Pencil size={18} />
+                    Editar
+                  </button>
+
+                  <button
+                    onClick={() => excluirProduto(produto.id)}
+                    className="bg-red-50 border border-red-100 text-red-500 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold"
+                  >
+                    <Trash2 size={18} />
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </main>
+
+      <button
+        onClick={abrirNovoProduto}
+        className="fixed right-5 bottom-24 bg-[#102d5c] text-white w-16 h-16 rounded-full shadow-xl flex items-center justify-center z-50"
+      >
+        <Plus size={34} />
+      </button>
 
       {abrirForm && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
