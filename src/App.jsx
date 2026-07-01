@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Inventario from "./pages/Inventario";
 import Produtos from "./pages/Produtos";
 import Relatorios from "./pages/Relatorios";
+import Configuracoes from "./pages/Configuracoes";
 import PrivateRoute from "./components/PrivateRoute";
 
 function App() {
@@ -21,7 +22,6 @@ function App() {
             </PrivateRoute>
           }
         />
-
         <Route
           path="/inventario"
           element={
@@ -30,7 +30,6 @@ function App() {
             </PrivateRoute>
           }
         />
-
         <Route
           path="/produtos"
           element={
@@ -39,12 +38,19 @@ function App() {
             </PrivateRoute>
           }
         />
-
         <Route
           path="/relatorios"
           element={
             <PrivateRoute>
               <Relatorios />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/configuracoes"
+          element={
+            <PrivateRoute>
+              <Configuracoes />
             </PrivateRoute>
           }
         />
