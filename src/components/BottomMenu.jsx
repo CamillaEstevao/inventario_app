@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Home,
   ClipboardList,
@@ -6,12 +7,36 @@ import {
   Settings,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { supabase } from "../services/supabase";
 
 export default function BottomMenu() {
+  const [alertas, setAlertas] = useState(0);
+
+  async function buscarAlertas() {
+    const { data, error } = await supabase
+      .from("produtos")
+      .select("id, quantidade");
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    const totalAlertas = (data || []).filter(
+      (produto) => Number(produto.quantidade || 0) <= 10,
+    ).length;
+
+    setAlertas(totalAlertas);
+  }
+
+  useEffect(() => {
+    buscarAlertas();
+  }, []);
+
   const menus = [
     {
       to: "/",
-      label: "Home",
+      label: "Lar",
       icon: Home,
       end: true,
     },
@@ -24,6 +49,7 @@ export default function BottomMenu() {
       to: "/produtos",
       label: "Produtos",
       icon: Package,
+      badge: alertas,
     },
     {
       to: "/relatorios",
@@ -49,7 +75,7 @@ export default function BottomMenu() {
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 min-w-[62px] transition-all duration-200 ${
+                `relative flex flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 min-w-[62px] transition-all duration-200 ${
                   isActive
                     ? "bg-[#102d5c] text-white shadow-lg scale-105"
                     : "text-gray-400 hover:text-[#102d5c] hover:bg-gray-50"
@@ -58,11 +84,19 @@ export default function BottomMenu() {
             >
               {({ isActive }) => (
                 <>
-                  <Icon
-                    size={22}
-                    strokeWidth={isActive ? 2.8 : 2.2}
-                    className="transition-all duration-200"
-                  />
+                  <div className="relative">
+                    <Icon
+                      size={22}
+                      strokeWidth={isActive ? 2.8 : 2.2}
+                      className="transition-all duration-200"
+                    />
+
+                    {item.badge > 0 && (
+                      <span className="absolute -top-3 -right-3 bg-red-500 text-white text-[10px] font-bold min-w-5 h-5 px-1 rounded-full flex items-center justify-center border-2 border-white">
+                        {item.badge > 9 ? "9+" : item.badge}
+                      </span>
+                    )}
+                  </div>
 
                   <span className="text-[11px] font-bold leading-none">
                     {item.label}
