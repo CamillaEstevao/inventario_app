@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -11,7 +11,9 @@ import {
   Boxes,
   AlertTriangle,
   Filter,
+  ScanLine,
 } from "lucide-react";
+import { BrowserMultiFormatReader } from "@zxing/browser";
 import BottomMenu from "../components/BottomMenu";
 import { supabase } from "../services/supabase";
 
@@ -19,12 +21,17 @@ export default function Produtos() {
   const [produtos, setProdutos] = useState([]);
   const [abrirForm, setAbrirForm] = useState(false);
   const [editando, setEditando] = useState(null);
+  const [escaneando, setEscaneando] = useState(false);
+
+  const videoRef = useRef(null);
+  const scannerRef = useRef(null);
 
   const [busca, setBusca] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("Todos");
   const [ordem, setOrdem] = useState("recentes");
 
   const [nome, setNome] = useState("");
+  const [codigoBarras, setCodigoBarras] = useState("");
   const [quantidade, setQuantidade] = useState("");
   const [categoria, setCategoria] = useState("Geral");
   const [tipoContagem, setTipoContagem] = useState("unidade");
@@ -54,6 +61,69 @@ export default function Produtos() {
   useEffect(() => {
     buscarProdutos();
   }, []);
+
+  useEffect(() => {
+    if (!escaneando) return;
+
+    async function iniciarScanner() {
+      try {
+        const leitor = new BrowserMultiFormatReader();
+
+        scannerRef.current = await leitor.decodeFromVideoDevice(
+          undefined,
+          videoRef.current,
+          (resultado) => {
+            if (resultado) {
+              const codigo = resultado.getText();
+              tratarCodigoLido(codigo);
+            }
+          },
+        );
+      } catch (error) {
+        console.log(error);
+        alert("Não foi possível abrir a câmera.");
+        setEscaneando(false);
+      }
+    }
+
+    iniciarScanner();
+
+    return () => {
+      pararScanner();
+    };
+  }, [escaneando]);
+
+  function pararScanner() {
+    if (scannerRef.current) {
+      scannerRef.current.stop();
+      scannerRef.current = null;
+    }
+  }
+
+  function tratarCodigoLido(codigo) {
+    pararScanner();
+    setEscaneando(false);
+
+    const produtoEncontrado = produtos.find(
+      (produto) => String(produto.codigo_barras || "") === String(codigo),
+    );
+
+    if (produtoEncontrado) {
+      editarProduto(produtoEncontrado);
+      alert(`Produto encontrado: ${produtoEncontrado.nome}`);
+      return;
+    }
+
+    const cadastrar = confirm(
+      `Código não encontrado:\n${codigo}\n\nDeseja cadastrar um novo produto com esse código?`,
+    );
+
+    if (cadastrar) {
+      limparForm();
+      setCodigoBarras(codigo);
+      setAbrirForm(true);
+    }
+  }
 
   function selecionarFoto(e) {
     const file = e.target.files?.[0];
@@ -120,7 +190,6 @@ export default function Produtos() {
         corTexto: "text-red-600",
         corBolinha: "bg-red-500",
         corBarra: "bg-red-500",
-        fundo: "bg-red-50",
       };
     }
 
@@ -130,7 +199,6 @@ export default function Produtos() {
         corTexto: "text-orange-600",
         corBolinha: "bg-orange-500",
         corBarra: "bg-orange-400",
-        fundo: "bg-orange-50",
       };
     }
 
@@ -139,12 +207,12 @@ export default function Produtos() {
       corTexto: "text-green-600",
       corBolinha: "bg-green-500",
       corBarra: "bg-[#102d5c]",
-      fundo: "bg-green-50",
     };
   }
 
   function limparForm() {
     setNome("");
+    setCodigoBarras("");
     setQuantidade("");
     setCategoria("Geral");
     setTipoContagem("unidade");
@@ -170,6 +238,7 @@ export default function Produtos() {
 
     setEditando(produto);
     setNome(produto.nome || "");
+    setCodigoBarras(produto.codigo_barras || "");
     setQuantidade(String(total));
     setCategoria(produto.categoria || "Geral");
     setTipoContagem(produto.tipo_contagem || "unidade");
@@ -208,6 +277,7 @@ export default function Produtos() {
 
     const produtoPayload = {
       nome: nome.trim(),
+      codigo_barras: codigoBarras.trim() || null,
       quantidade: quantidadeFinal,
       categoria,
       tipo_contagem: tipoContagem,
@@ -285,28 +355,26 @@ export default function Produtos() {
 
   const produtosFiltrados = produtos
     .filter((produto) => {
-      const nomeCombina = produto.nome
+      const buscaTexto = busca.toLowerCase();
+
+      const nomeCombina = produto.nome.toLowerCase().includes(buscaTexto);
+
+      const codigoCombina = String(produto.codigo_barras || "")
         .toLowerCase()
-        .includes(busca.toLowerCase());
+        .includes(buscaTexto);
 
       const categoriaCombina =
         categoriaFiltro === "Todos" ||
         (produto.categoria || "Geral") === categoriaFiltro;
 
-      return nomeCombina && categoriaCombina;
+      return (nomeCombina || codigoCombina) && categoriaCombina;
     })
     .sort((a, b) => {
-      if (ordem === "nome") {
-        return a.nome.localeCompare(b.nome);
-      }
-
-      if (ordem === "menor") {
+      if (ordem === "nome") return a.nome.localeCompare(b.nome);
+      if (ordem === "menor")
         return Number(a.quantidade || 0) - Number(b.quantidade || 0);
-      }
-
-      if (ordem === "maior") {
+      if (ordem === "maior")
         return Number(b.quantidade || 0) - Number(a.quantidade || 0);
-      }
 
       return Number(b.id || 0) - Number(a.id || 0);
     });
@@ -335,15 +403,24 @@ export default function Produtos() {
       </header>
 
       <main className="p-4 space-y-4">
-        <div className="bg-white rounded-2xl p-3 flex gap-3 items-center shadow">
-          <Search className="text-gray-400" />
+        <div className="grid grid-cols-[1fr_auto] gap-3">
+          <div className="bg-white rounded-2xl p-3 flex gap-3 items-center shadow">
+            <Search className="text-gray-400" />
 
-          <input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar produto..."
-            className="outline-none w-full bg-transparent"
-          />
+            <input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar produto ou código..."
+              className="outline-none w-full bg-transparent"
+            />
+          </div>
+
+          <button
+            onClick={() => setEscaneando(true)}
+            className="bg-[#102d5c] text-white rounded-2xl px-4 shadow flex items-center justify-center"
+          >
+            <ScanLine />
+          </button>
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -437,6 +514,12 @@ export default function Produtos() {
                       {produto.categoria || "Geral"}
                     </p>
 
+                    {produto.codigo_barras && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Cód: {produto.codigo_barras}
+                      </p>
+                    )}
+
                     <div className="mt-3">
                       <p className="text-sm text-gray-500">Estoque</p>
 
@@ -510,6 +593,36 @@ export default function Produtos() {
         <Plus size={34} />
       </button>
 
+      {escaneando && (
+        <div className="fixed inset-0 bg-black/80 z-[120] flex flex-col items-center justify-center p-5">
+          <div className="bg-white rounded-3xl p-4 w-full max-w-md">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="font-bold text-lg">Scanner de código</h2>
+
+              <button
+                onClick={() => {
+                  pararScanner();
+                  setEscaneando(false);
+                }}
+              >
+                <X />
+              </button>
+            </div>
+
+            <video
+              ref={videoRef}
+              className="w-full h-72 bg-black rounded-2xl object-cover"
+              muted
+              playsInline
+            />
+
+            <p className="text-center text-sm text-gray-500 mt-3">
+              Aponte a câmera para o código de barras.
+            </p>
+          </div>
+        </div>
+      )}
+
       {abrirForm && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
           <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-4 max-h-[95vh] overflow-y-auto space-y-3 pb-8">
@@ -560,6 +673,13 @@ export default function Produtos() {
               placeholder="Nome"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
+              className="border p-3 rounded-xl w-full"
+            />
+
+            <input
+              placeholder="Código de barras"
+              value={codigoBarras}
+              onChange={(e) => setCodigoBarras(e.target.value)}
               className="border p-3 rounded-xl w-full"
             />
 
